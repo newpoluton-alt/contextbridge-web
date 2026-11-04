@@ -1,0 +1,60 @@
+{
+  "name": "contextbridge-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n api,web \"npm:dev:api\" \"npm:dev:client\"",
+    "dev:api": "tsx watch src/server/main.ts",
+    "dev:client": "vite --host 127.0.0.1",
+    "build": "npm run typecheck && vite build && tsc -p tsconfig.server.json",
+    "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.client.json --noEmit",
+    "start": "node dist/server/main.js",
+    "test": "tsx --test tests/*.test.ts",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "setup:key": "node scripts/setup-key.mjs",
+    "deploy:production": "node scripts/deploy.mjs",
+    "dev:cloud": "cross-env DEMO_MODE=false npm run dev",
+    "dev:demo": "cross-env DEMO_MODE=true npm run dev",
+    "test:db": "tsx --test tests/database.integration.ts",
+    "test:ai": "tsx --test tests/ai.integration.ts"
+  },
+  "dependencies": {
+    "@neon/neon-js": "^0.10.2",
+    "@nestjs/common": "^12.3.3",
+    "@nestjs/core": "^12.3.3",
+    "@nestjs/platform-express": "^12.3.3",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "helmet": "^8.3.0",
+    "jose": "^6.2.15",
+    "lucide-react": "^1.68.0",
+    "openai": "^7.50.0",
+    "pg": "^8.23.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-markdown": "^10.1.0",
+    "reflect-metadata": "^0.2.2",
+    "remark-gfm": "^4.0.1",
+    "rxjs": "^7.8.2",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.6",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.2.1",
+    "concurrently": "^10.0.6",
+    "cross-env": "^10.1.0",
+    "prettier": "^3.9.10",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5"
+  }
+}
