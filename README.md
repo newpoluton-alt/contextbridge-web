@@ -1,10 +1,27 @@
-# ContextBridge web
+<p align="center">
+  <img src=".github/assets/contextbridge.svg" alt="ContextBridge icon" width="72" height="72" />
+</p>
+
+<h1 align="center">ContextBridge · Web</h1>
+
+<p align="center">A little context. A world of possibility.<br />Your personal space for the language you discover.</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/React-19-149ECA?style=flat&amp;logo=react&amp;logoColor=white" alt="React 19" />
+  <img src="https://img.shields.io/badge/NestJS-12-E0234E?style=flat&amp;logo=nestjs&amp;logoColor=white" alt="NestJS 12" />
+  <img src="https://img.shields.io/badge/Neon-Postgres_%2B_pgvector-386A59?style=flat&amp;logo=neon&amp;logoColor=white" alt="Neon Postgres and pgvector" />
+  <img src="https://img.shields.io/badge/Hosted_on-Vercel-222222?style=flat&amp;logo=vercel&amp;logoColor=white" alt="Hosted on Vercel" />
+</p>
+
+<p align="center">
+  <a href="https://contextbridge-newpoluton.vercel.app">🌐 Open the app</a> ·
+  <a href="https://contextbridge-newpoluton.vercel.app/downloads/contextbridge-extension.zip">📦 Download extension</a> ·
+  <a href="https://github.com/newpoluton-alt/contextbridge-extension">↗ Extension repository</a>
+</p>
 
 React 19/Vite interface and NestJS 12 API. Requires Node 24.
 
-Live site: https://contextbridge-newpoluton.vercel.app
-
-Chrome extension: https://contextbridge-newpoluton.vercel.app/downloads/contextbridge-extension.zip
+## ⚡ Get started
 
 Vercel production secrets are configured. Local secrets remain in ignored `.env`; no API key is bundled into the extension or website.
 
@@ -17,7 +34,7 @@ Open http://localhost:5173. The API is on port 3000. The supplied private `.env`
 
 `npm run setup:key` opens a one-use local password field that writes the OpenAI key into `.env`. Never place the key in the browser-extension environment or any public-prefixed variable. Your supplied OpenAI key is saved privately for this workspace; it is excluded from Git and browser builds.
 
-## Commands
+## ⚙️ Commands
 
 - `npm run build`: typecheck and build client/server.
 - `npm test`: API, learning-flow, access-isolation, persistence and concurrency tests.
@@ -28,7 +45,7 @@ Open http://localhost:5173. The API is on port 3000. The supplied private `.env`
 - `npm run dev:cloud`: use live Neon accounts/data.
 - `npm run deploy:production`: transfer configured values and secret keys to the linked Vercel project, then publish. Production requires APP_URL, EXTENSION_IDS, Neon settings and an API key. Demo mode is forced off remotely. The Vercel CLI may need its own login even though the Codex Vercel plugin is connected.
 
-## Architecture
+## 🧩 Architecture
 
 `src/client` contains the browser interface. `src/server` contains the API, JWT validation, per-user storage, AI prompt/schema validation, retrieval and review scheduling. `api/index.ts` adapts the same Nest app for Vercel Functions. `sql/001_init.sql` creates the schema. No database or provider secret enters the Vite bundle.
 
@@ -40,7 +57,7 @@ Neon Auth uses verification codes through its shared email service. The producti
 
 See [PLAN_AUDIT.md](PLAN_AUDIT.md) for the complete PDF requirements audit. The extension source is maintained separately at https://github.com/newpoluton-alt/contextbridge-extension.
 
-## Token efficiency
+## 🍃 Token efficiency
 
 The web app and extension share these controls on the server:
 
@@ -54,10 +71,10 @@ The web app and extension share these controls on the server:
 
 A live integration check on 4 November 2026 exercised explanation generation, cross-mode cache reuse, one saved embedding, contextual chat, cached chat retry and interpretation feedback: four paid requests used 933 input tokens and 296 output tokens in total. This is one test, not a fixed per-user cost.
 
-## Account and extension connection
+## 🔗 Account and extension connection
 
 Create an account and enter the emailed verification code. Both browser and API require verified email. In Settings, install the extension download and choose **Connect extension**. Chrome may require one server-access approval in extension Settings; no password or API key is copied to the extension. Manual code pairing remains available. Each extension token is revocable and expires after 30 days.
 
-## Verified release
+## ✅ Verified release
 
 Production release `bd02f13` was built successfully and verified on 4 November 2026: final client asset, API health/cloud configuration, unauthenticated data rejection, approved extension origin, and ZIP checksum all passed. Verification also includes 34 backend tests, nine extension tests, real Neon/AI checks and browser regressions. Actual email inbox delivery, all three desktop operating systems, and the course’s peer/instructor evaluation are recorded as unverified external work in the audit.
