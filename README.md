@@ -38,7 +38,7 @@ Server limits bound input size, output tokens, retries, history length and daily
 
 Neon Auth uses verification codes through its shared email service. The production origin is registered. Both the website and API require verified email before data/AI access; blocked or deleted accounts lose extension access too. Real inbox delivery still needs an account-owner test, and a custom email provider is recommended before a wider launch. Live AI has been exercised against the configured OpenAI account.
 
-See PLAN_AUDIT.md for the complete PDF requirements audit. The extension source is maintained separately at https://github.com/newpoluton-alt/contextbridge-extension.
+See [PLAN_AUDIT.md](PLAN_AUDIT.md) for the complete PDF requirements audit. The extension source is maintained separately at https://github.com/newpoluton-alt/contextbridge-extension.
 
 ## Token efficiency
 
@@ -57,3 +57,7 @@ A live integration check on 4 November 2026 exercised explanation generation, cr
 ## Account and extension connection
 
 Create an account and enter the emailed verification code. Both browser and API require verified email. In Settings, install the extension download and choose **Connect extension**. Chrome may require one server-access approval in extension Settings; no password or API key is copied to the extension. Manual code pairing remains available. Each extension token is revocable and expires after 30 days.
+
+## Verified release
+
+Production release `bd02f13` was built successfully and verified on 4 November 2026: final client asset, API health/cloud configuration, unauthenticated data rejection, approved extension origin, and ZIP checksum all passed. Verification also includes 34 backend tests, nine extension tests, real Neon/AI checks and browser regressions. Actual email inbox delivery, all three desktop operating systems, and the course’s peer/instructor evaluation are recorded as unverified external work in the audit.
