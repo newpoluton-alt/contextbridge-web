@@ -171,6 +171,8 @@ export default function Learn({
         }),
       );
       resetResult();
+      // Keep the explanation tied to the preference used for this request.
+      setTranslationLanguage(translationLanguage);
       setResult(next);
       setRevealed(mode === "direct");
       const normalized = (text: string) => text.trim().replace(/\s+/gu, " ");
@@ -294,7 +296,7 @@ export default function Learn({
                 required
                 maxLength={120}
                 value={expression}
-                disabled={!!result}
+                disabled={!!result || busy === "lookup"}
                 onChange={(e) => setExpression(e.target.value)}
                 placeholder="e.g. addresses"
               />
@@ -306,7 +308,7 @@ export default function Learn({
                 rows={5}
                 maxLength={2400}
                 value={sentence}
-                disabled={!!result}
+                disabled={!!result || busy === "lookup"}
                 onChange={(e) => setSentence(e.target.value)}
                 placeholder="The proposal addresses the housing shortage by funding new construction."
               />
@@ -318,7 +320,7 @@ export default function Learn({
               Language
               <select
                 value={language}
-                disabled={!!result}
+                disabled={!!result || busy === "lookup"}
                 onChange={(e) => setLanguage(e.target.value)}
               >
                 {[
@@ -363,6 +365,7 @@ export default function Learn({
               <button
                 type="button"
                 className={`mode-option ${mode === "guided" ? "selected" : ""}`}
+                disabled={busy === "lookup"}
                 onClick={() => {
                   setMode("guided");
                   if (result) setRevealed(false);
@@ -378,6 +381,7 @@ export default function Learn({
               <button
                 type="button"
                 className={`mode-option ${mode === "direct" ? "selected" : ""}`}
+                disabled={busy === "lookup"}
                 onClick={() => {
                   setMode("direct");
                   if (result) showAnswer();
@@ -416,7 +420,7 @@ export default function Learn({
           {config.demo && (
             <button
               className="demo-example"
-              disabled={!!result}
+              disabled={!!result || busy === "lookup"}
               onClick={() => {
                 setExpression("addresses");
                 setSentence(

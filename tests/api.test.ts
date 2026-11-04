@@ -179,3 +179,46 @@ test("account verification blocks unverified, deleted and banned identities", as
     assertVerifiedAccount({ emailVerified: true, banned: false }),
   );
 });
+test("lookup returns an exact older saved context before six newer expression matches without AI usage", async () => {
+  const { fixtureInputs, fixture } = await import("../src/server/fixtures.js");
+  const input = fixtureInputs[0];
+  const ids: string[] = [];
+  const usageBefore = (await request("/usage")).data;
+  const record = {
+    ...input,
+    explanation: fixture(input),
+    sourceUrl: "https://example.com/oldest-context",
+    initialInterpretation: "The original interpretation must remain available.",
+    revisedInterpretation: "It takes action about a problem.",
+    assistance: ["initial_attempt"],
+    checkResponse: "",
+    unresolved: false,
+  };
+  try {
+    const oldest = await request("/encounters", "POST", record);
+    assert.equal(oldest.status, 201);
+    ids.push(oldest.data.id);
+    for (let index = 0; index < 6; index++) {
+      const newer = await request("/encounters", "POST", {
+        ...record,
+        sentence: `The proposal addresses issue number ${index + 1} through new construction.`,
+        initialInterpretation: "A newer encounter.",
+      });
+      assert.equal(newer.status, 201);
+      ids.push(newer.data.id);
+    }
+    const all = (await request("/encounters")).data.items.filter((item: { expression: string }) => item.expression === input.expression);
+    assert(!all.slice(0, 5).some((item: { id: string }) => item.id === oldest.data.id), "Fixture must place the exact encounter outside the five newest records.");
+    const reused = await request("/lookup", "POST", { ...input, mode: "direct" });
+    assert.equal(reused.status, 201);
+    assert.equal(reused.data.cached, true);
+    assert.equal(reused.data.matches[0].id, oldest.data.id);
+    assert.equal(reused.data.matches[0].initialInterpretation, record.initialInterpretation);
+    assert.equal(reused.data.matches.length, 5);
+    assert.equal(new Set(reused.data.matches.map((item: { id: string }) => item.id)).size, 5);
+    assert.deepEqual(reused.data.explanation, record.explanation);
+    assert.deepEqual((await request("/usage")).data, usageBefore);
+  } finally {
+    for (const id of ids) await request(`/encounters/${id}`, "DELETE");
+  }
+});
