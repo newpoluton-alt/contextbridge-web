@@ -158,16 +158,25 @@ export class Store {
       ...(this.local.settings[owner] as Partial<Settings> | undefined),
     };
   }
-  async setSettings(owner: string, data: Partial<Settings>): Promise<Settings> {
+  async setSettings(
+    owner: string,
+    data: Partial<Settings>,
+    fallbackName = "Reader",
+  ): Promise<Settings> {
     if (this.pool) {
       const result = await this.pool.query(
         "INSERT INTO cb_settings(owner_id,data) VALUES($1,$2) ON CONFLICT(owner_id) DO UPDATE SET data=cb_settings.data || $3::jsonb RETURNING data",
-        [owner, { ...defaults, ...data }, data],
+        [owner, { ...defaults, name: fallbackName, ...data }, data],
       );
       return { ...defaults, ...result.rows[0].data };
     }
     return this.mutate((d) => {
-      const next = { ...defaults, ...d.settings[owner], ...data };
+      const next = {
+        ...defaults,
+        name: fallbackName,
+        ...(d.settings[owner] as Partial<Settings> | undefined),
+        ...data,
+      };
       d.settings[owner] = next;
       return next;
     });

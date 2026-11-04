@@ -80,9 +80,11 @@ class ApiController {
     @Req() req: Request,
     @Body() body: unknown,
   ) {
+    const user = await identity(req);
     return store.setSettings(
-      (await identity(req)).id,
+      user.id,
       settingsSchema.partial().parse(body),
+      user.name,
     );
   }
   @Get("encounters") async list(

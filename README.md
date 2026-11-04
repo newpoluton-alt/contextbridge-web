@@ -1,6 +1,12 @@
 # ContextBridge web
 
-React 19/Vite interface and NestJS 12 API. Requires Node 24+.
+React 19/Vite interface and NestJS 12 API. Requires Node 24.
+
+Live site: https://contextbridge-newpoluton.vercel.app
+
+Chrome extension: https://contextbridge-newpoluton.vercel.app/downloads/contextbridge-extension.zip
+
+Vercel production secrets are configured. Local secrets remain in ignored `.env`; no API key is bundled into the extension or website.
 
 ```sh
 npm install
@@ -47,3 +53,7 @@ The web app and extension share these controls on the server:
 - Actual input/output/cached-input tokens are counted in Neon. Both interfaces show daily usage. AI_DAILY_TOKEN_LIMIT defaults to 25,000 and AI_DAILY_REQUEST_LIMIT to 60 per account; UTC resets. Conservative reservations enforce limits during concurrent calls; uncertain failed-call usage is charged conservatively.
 
 A live integration check on 4 November 2026 exercised explanation generation, cross-mode cache reuse, one saved embedding, contextual chat, cached chat retry and interpretation feedback: four paid requests used 933 input tokens and 296 output tokens in total. This is one test, not a fixed per-user cost.
+
+## Account and extension connection
+
+Create an account and enter the emailed verification code. Both browser and API require verified email. In Settings, install the extension download and choose **Connect extension**. Chrome may require one server-access approval in extension Settings; no password or API key is copied to the extension. Manual code pairing remains available. Each extension token is revocable and expires after 30 days.

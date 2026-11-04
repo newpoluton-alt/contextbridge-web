@@ -20,7 +20,15 @@ import {
   Sprout,
   X,
 } from "lucide-react";
-import { api, downloadAnki, errorMessage, json, setTokenProvider } from "./api";
+import {
+  api,
+  ApiError,
+  captureApiToken,
+  downloadAnki,
+  errorMessage,
+  json,
+  setTokenProvider,
+} from "./api";
 import { createClient, type AuthClient } from "./auth";
 import { clearAccountDrafts } from "./drafts";
 import {
@@ -83,19 +91,28 @@ export default function App() {
   const [selected, setSelected] = useState<Encounter | null>(null);
   const [chatContext, setChatContext] = useState<LearningContext | null>(null);
   const [accountId, setAccountId] = useState("");
+  const activeAccount = useRef("");
   const refreshInFlight = useRef<Promise<void> | null>(null);
   const sessionVersion = useRef(0);
   const refresh = useCallback(async () => {
     if (refreshInFlight.current) return refreshInFlight.current;
     const version = sessionVersion.current;
     const request = (async () => {
+      // Keep the whole refresh on one identity if another tab switches accounts.
+      const token = await captureApiToken();
       const [words, preferences, conversations, identity] = await Promise.all([
-        api<{ items: Encounter[] }>("/encounters"),
-        api<Settings>("/settings"),
-        api<{ items: Chat[] }>("/chats"),
-        api<{ id: string }>("/me"),
+        api<{ items: Encounter[] }>("/encounters", {}, token),
+        api<Settings>("/settings", {}, token),
+        api<{ items: Chat[] }>("/chats", {}, token),
+        api<{ id: string }>("/me", {}, token),
       ]);
       if (sessionVersion.current !== version) return;
+      if (activeAccount.current !== identity.id) {
+        activeAccount.current = identity.id;
+        setSelected(null);
+        setChatContext(null);
+        setError("");
+      }
       setItems(words.items);
       setSettings(preferences);
       setChats(conversations.items);
@@ -104,6 +121,25 @@ export default function App() {
     refreshInFlight.current = request;
     try {
       await request;
+    } catch (error) {
+      if (
+        error instanceof ApiError &&
+        (error.status === 401 || error.status === 403)
+      ) {
+        // A new cookie can belong to an unverified or blocked account. Never
+        // leave the previous account's workspace visible after access fails.
+        sessionVersion.current += 1;
+        activeAccount.current = "";
+        setAccountId("");
+        setSignedIn(false);
+        setItems([]);
+        setSettings(null);
+        setChats([]);
+        setSelected(null);
+        setChatContext(null);
+        setVerificationEmail("");
+      }
+      throw error;
     } finally {
       if (refreshInFlight.current === request) refreshInFlight.current = null;
     }
@@ -133,6 +169,10 @@ export default function App() {
               setItems([]);
               setSettings(null);
               setChats([]);
+              activeAccount.current = "";
+              setAccountId("");
+              setSelected(null);
+              setChatContext(null);
               throw new Error("Your session expired. Please sign in again.");
             }
             return result.data.token;
@@ -215,6 +255,11 @@ export default function App() {
       setItems([]);
       setSettings(null);
       setChats([]);
+      activeAccount.current = "";
+      setAccountId("");
+      setSelected(null);
+      setChatContext(null);
+      setVerificationEmail("");
     } catch (e) {
       setError(errorMessage(e));
     }
@@ -355,7 +400,7 @@ export default function App() {
             </button>
           </div>
         </header>
-        <main className="main-content">
+        <main className="main-content" key={accountId}>
           {error && (
             <ErrorNotice message={error} onClose={() => setError("")} />
           )}

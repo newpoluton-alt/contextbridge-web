@@ -3878,6 +3878,22 @@ fieldset {
 .card {
   min-width: 0;
 }
+.manual-pair-link {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 15px;
+  font-size: 10px;
+}
+.extension-status {
+  font-size: 10px;
+  line-height: 1.8;
+  margin-bottom: 16px;
+  padding: 12px;
+}
+.extension-status > svg {
+  flex-shrink: 0;
+}
 .comparison-choice {
   display: flex;
   flex-direction: column;

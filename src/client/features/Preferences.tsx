@@ -11,6 +11,10 @@ import {
   Sparkles,
 } from "lucide-react";
 import { api, errorMessage, json } from "../api";
+import {
+  connectInstalledExtension,
+  type ExtensionConnection,
+} from "../extension";
 import { ErrorNotice } from "../components/ui";
 import type { Config, Mode, Settings } from "../types";
 
@@ -62,6 +66,9 @@ export default function Preferences({
     null,
   );
   const [copied, setCopied] = useState(false);
+  const [connection, setConnection] = useState<ExtensionConnection | null>(
+    null,
+  );
   const [now, setNow] = useState(Date.now());
   const [usage, setUsage] = useState<Usage | null>(null);
   const [usageLoading, setUsageLoading] = useState(false);
@@ -128,12 +135,23 @@ export default function Preferences({
       setBusy("");
     }
   }
-  async function connect() {
+  async function connect(manual = false) {
     setBusy("pair");
     setError("");
+    setConnection(null);
+    setPair(null);
     try {
-      setPair(await api("/extension/pair", json({})));
+      const code = await api<{ code: string; expiresAt: string }>(
+        "/extension/pair",
+        json({}),
+      );
       setCopied(false);
+      if (manual) setPair(code);
+      else {
+        const status = await connectInstalledExtension(code.code);
+        setConnection(status);
+        if (status === "unavailable") setPair(code);
+      }
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -404,8 +422,14 @@ export default function Preferences({
                 then choose <strong>Load unpacked</strong> and select the
                 extracted folder.
               </li>
-              <li>Open its settings and enter this website’s address.</li>
-              <li>Generate a code here and paste it into the extension.</li>
+              <li>
+                Choose <strong>Connect installed extension</strong> below. If
+                Chrome asks, approve this website in the extension’s settings.
+              </li>
+              <li>
+                If automatic connection is unavailable, use the connection code
+                and website address below.
+              </li>
             </ol>
             <label>
               Website address
@@ -415,6 +439,31 @@ export default function Preferences({
                 aria-label="Website address for extension"
               />
             </label>
+            {connection === "connected" && (
+              <div className="notice success extension-status" role="status">
+                <Check size={17} />
+                <span>
+                  Your extension is connected. Open it to start reading.
+                </span>
+              </div>
+            )}
+            {connection === "permission_required" && (
+              <div className="notice extension-status" role="status">
+                <Puzzle size={17} />
+                <span>
+                  Finish in the extension settings that Chrome opened. Approve
+                  this website there to connect automatically.
+                </span>
+              </div>
+            )}
+            {connection === "unavailable" && (
+              <div className="notice extension-status" role="status">
+                <span>
+                  The installed extension could not be reached. Download it
+                  above, or paste this code into its settings to connect.
+                </span>
+              </div>
+            )}
             {pair && (
               <div className={`pair-code ${!secondsLeft ? "expired" : ""}`}>
                 <span className="eyebrow">
@@ -443,18 +492,29 @@ export default function Preferences({
               type="button"
               className="button primary full-width"
               disabled={!!busy}
-              onClick={connect}
+              onClick={() => connect()}
             >
               <Puzzle size={17} />
               {busy === "pair"
-                ? "Generating…"
-                : pair
-                  ? "Generate a new code"
-                  : "Connect your extension"}
+                ? "Connecting…"
+                : connection === "connected"
+                  ? "Reconnect extension"
+                  : "Connect installed extension"}
+            </button>
+            <button
+              type="button"
+              className="text-link manual-pair-link"
+              disabled={!!busy}
+              onClick={() => connect(true)}
+            >
+              {pair
+                ? "Generate a new connection code"
+                : "Use a connection code instead"}
             </button>
             <small className="muted">
-              Treat this code like a sign-in link. It grants access to your
-              library.
+              {pair
+                ? "Treat this code like a sign-in link. It grants access to your library."
+                : "Connect once to bring your saved words and preferences into the extension."}
             </small>
           </section>
           <section className="card export-card">
