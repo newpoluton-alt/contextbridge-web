@@ -29,7 +29,12 @@ import {
   json,
   setTokenProvider,
 } from "./api";
-import { createClient, type AuthClient } from "./auth";
+import {
+  createClient,
+  getSignInSession,
+  getWorkspaceToken,
+  type AuthClient,
+} from "./auth";
 import { clearAccountDrafts } from "./drafts";
 import {
   Brand,
@@ -161,7 +166,7 @@ export default function App() {
           // instead of treating it as an updater and requesting the auth root.
           setAuth(() => client);
           setTokenProvider(async () => {
-            const result = await client.token();
+            const result = await getWorkspaceToken(client);
             if (result.error || !result.data?.token) {
               sessionVersion.current += 1;
               refreshInFlight.current = null;
@@ -173,7 +178,10 @@ export default function App() {
               setAccountId("");
               setSelected(null);
               setChatContext(null);
-              throw new Error("Your session expired. Please sign in again.");
+              throw new Error(
+                result.error?.message ||
+                  "Could not get a session token for your workspace. Please sign in again.",
+              );
             }
             return result.data.token;
           });
@@ -182,8 +190,8 @@ export default function App() {
             if (!session.data.user.emailVerified) {
               setVerificationEmail(session.data.user.email);
             } else {
-              setSignedIn(true);
               await refresh();
+              setSignedIn(true);
             }
           }
         }
@@ -230,18 +238,32 @@ export default function App() {
     setPage(p);
     setMenu(false);
   }
-  async function onSignedIn() {
-    if (!auth) return;
-    const session = await auth.getSession();
-    if (session.data?.user) {
-      if (!session.data.user.emailVerified) {
-        setVerificationEmail(session.data.user.email);
-        return;
-      }
-      setVerificationEmail("");
-      setSignedIn(true);
-      await refresh();
+  async function onSignedIn(action: "signin" | "verify") {
+    if (!auth)
+      throw new Error("Sign-in is unavailable. Please reload and try again.");
+    setError("");
+    const session = await getSignInSession(auth);
+    if (session.error)
+      throw new Error(
+        session.error.message ||
+          "Could not confirm your sign-in session. Please try again.",
+      );
+    if (!session.data?.user) {
+      // Verification can succeed without signing in automatically. The form
+      // already displays the next step for this flow.
+      if (action === "verify") return;
+      throw new Error(
+        "Your password was accepted, but the browser could not open a sign-in session. Please try again.",
+      );
     }
+    if (!session.data.user.emailVerified) {
+      setVerificationEmail(session.data.user.email);
+      return;
+    }
+    setVerificationEmail("");
+    // Keep the form mounted so a workspace access error stays visible there.
+    await refresh();
+    setSignedIn(true);
   }
   async function signOut() {
     try {
@@ -305,6 +327,7 @@ export default function App() {
         client={auth}
         onSignedIn={onSignedIn}
         verificationEmail={verificationEmail}
+        sessionError={error}
       />
     );
   return (

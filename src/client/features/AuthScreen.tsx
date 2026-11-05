@@ -8,10 +8,12 @@ export default function AuthScreen({
   client,
   onSignedIn,
   verificationEmail,
+  sessionError,
 }: {
   client: AuthClient | null;
-  onSignedIn: () => Promise<void>;
+  onSignedIn: (action: "signin" | "verify") => Promise<void>;
   verificationEmail?: string;
+  sessionError?: string;
 }) {
   const params = new URLSearchParams(window.location.search);
   const resetToken = params.get("token");
@@ -26,6 +28,9 @@ export default function AuthScreen({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  useEffect(() => {
+    if (sessionError) setError(sessionError);
+  }, [sessionError]);
   useEffect(() => {
     if (verificationEmail) {
       setEmail(verificationEmail);
@@ -68,7 +73,7 @@ export default function AuthScreen({
           );
         setNotice("Email verified. You can now sign in.");
         setView("signin");
-        await onSignedIn();
+        await onSignedIn("verify");
       } else if (view === "forgot") {
         const result = await client.requestPasswordReset({
           email,
@@ -99,7 +104,7 @@ export default function AuthScreen({
         const result = await client.signIn.email({ email, password });
         if (result.error)
           throw new Error(result.error.message || "Could not sign in.");
-        await onSignedIn();
+        await onSignedIn("signin");
       }
     } catch (err) {
       setError(errorMessage(err));

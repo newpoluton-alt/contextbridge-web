@@ -17,8 +17,13 @@ interface ManagedResult<T> {
   data: T | null;
   error: { message?: string } | null;
 }
+const freshAuthRequest = {
+  fetchOptions: { headers: { "X-Force-Fetch": "true" } },
+};
 interface ManagedNeonMethods {
-  token(): Promise<ManagedResult<{ token: string }>>;
+  token(
+    options: typeof freshAuthRequest,
+  ): Promise<ManagedResult<{ token: string }>>;
   emailOtp: {
     sendVerificationOtp(input: {
       email: string;
@@ -31,3 +36,14 @@ interface ManagedNeonMethods {
   };
 }
 export type AuthClient = ReturnType<typeof createClient>;
+
+export function getWorkspaceToken(client: AuthClient) {
+  // The managed SDK shares a cache between /token and /get-session. Ask for
+  // the JWT endpoint itself, since a cached session has a different shape.
+  return client.token(freshAuthRequest);
+}
+
+export function getSignInSession(client: AuthClient) {
+  // After a credential or verification change, read the current cookie session.
+  return client.getSession(freshAuthRequest);
+}
