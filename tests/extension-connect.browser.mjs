@@ -198,7 +198,7 @@ test("one-button extension account connection in a real browser", async (t) => {
   async function expectConnected(page) {
     await expect(page.getByRole("heading", { name: "Your extension is connected", exact: true })).toBeVisible();
     await expect(connect).toBeHidden();
-    await expect(panel.locator("#connection-state")).toContainText(/connected/i);
+    await expect(panel.locator("#account-card").getByRole("heading", { name: "Signed in", exact: true })).toBeVisible();
     await expect(panel.getByText(user.email, { exact: true })).toBeVisible();
     assert.ok(await panel.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "account card fits a narrow side panel");
     await expect(page.getByRole("button", { name: /Connect extension|Connect installed extension/i })).toHaveCount(0);
