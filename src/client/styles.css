@@ -4068,3 +4068,24 @@ fieldset {
     scroll-behavior: auto !important;
   }
 }
+
+.connection-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--green, #3e6146);
+  font-size: 13px;
+  font-weight: 600;
+}
+.extension-install-help {
+  margin-top: 22px;
+  text-align: left;
+}
+.extension-install-help summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+.extension-install-help > p {
+  margin-top: 16px;
+}

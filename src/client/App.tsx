@@ -36,6 +36,8 @@ import {
   type AuthClient,
 } from "./auth";
 import { clearAccountDrafts } from "./drafts";
+import { useExtensionConnection } from "./useExtensionConnection";
+import { lastKnownAccount, rememberAccount } from "./extension";
 import {
   Brand,
   dateLabel,
@@ -96,6 +98,7 @@ export default function App() {
   const [selected, setSelected] = useState<Encounter | null>(null);
   const [chatContext, setChatContext] = useState<LearningContext | null>(null);
   const [accountId, setAccountId] = useState("");
+  const extension = useExtensionConnection(accountId);
   const activeAccount = useRef("");
   const refreshInFlight = useRef<Promise<void> | null>(null);
   const sessionVersion = useRef(0);
@@ -113,6 +116,10 @@ export default function App() {
       ]);
       if (sessionVersion.current !== version) return;
       if (activeAccount.current !== identity.id) {
+        const previous = activeAccount.current || lastKnownAccount();
+        if (previous && previous !== identity.id)
+          void extension.disconnect(previous);
+        rememberAccount(identity.id);
         activeAccount.current = identity.id;
         setSelected(null);
         setChatContext(null);
@@ -148,7 +155,7 @@ export default function App() {
     } finally {
       if (refreshInFlight.current === request) refreshInFlight.current = null;
     }
-  }, []);
+  }, [extension.disconnect]);
   useEffect(() => {
     let cancelled = false;
     async function initialize() {
@@ -185,14 +192,24 @@ export default function App() {
             }
             return result.data.token;
           });
-          const session = await client.getSession();
+          const session = await getSignInSession(client);
+          if (session.error)
+            throw new Error(
+              session.error.message ||
+                "Could not check your sign-in. Please try again.",
+            );
           if (session.data?.user) {
             if (!session.data.user.emailVerified) {
               setVerificationEmail(session.data.user.email);
+              void extension.disconnect(lastKnownAccount());
             } else {
               await refresh();
               setSignedIn(true);
             }
+          } else {
+            // A confirmed missing cookie session after reload also signs this
+            // browser's extension out, scoped to the last verified identity.
+            void extension.disconnect(lastKnownAccount());
           }
         }
       } catch (e) {
@@ -205,7 +222,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [refresh]);
+  }, [refresh, extension.disconnect]);
   useEffect(() => {
     const change = () => {
       setPage(pageFromHash());
@@ -270,6 +287,7 @@ export default function App() {
       const result = await auth?.signOut();
       if (result?.error)
         throw new Error(result.error.message || "Could not sign out.");
+      void extension.disconnect(accountId);
       clearAccountDrafts(accountId);
       sessionVersion.current += 1;
       refreshInFlight.current = null;
@@ -368,10 +386,22 @@ export default function App() {
               <br />
               with you.
             </h4>
-            <p>Learn from any page with the browser extension.</p>
-            <button className="text-link" onClick={() => navigate("settings")}>
-              Connect extension <ArrowUpRight size={15} />
-            </button>
+            {extension.status === "connected" ? (
+              <p className="connection-badge" role="status">
+                <Check size={15} /> Extension connected
+              </p>
+            ) : (
+              <>
+                <p>Learn from any page with the browser extension.</p>
+                <button
+                  className="text-link"
+                  onClick={() => navigate("settings")}
+                >
+                  {extension.busy ? "Connecting…" : "Connect extension"}{" "}
+                  <ArrowUpRight size={15} />
+                </button>
+              </>
+            )}
           </div>
           <button
             className={`nav-item ${page === "settings" ? "active" : ""}`}
@@ -487,6 +517,7 @@ export default function App() {
               )}
               {page === "settings" && (
                 <Preferences
+                  extension={extension}
                   settings={settings}
                   config={config}
                   onUpdate={refresh}

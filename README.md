@@ -73,7 +73,7 @@ A live integration check on 4 November 2026 exercised explanation generation, cr
 
 ## 🔗 Account and extension connection
 
-Create an account and enter the emailed verification code. Both browser and API require verified email. In Settings, install the extension download and choose **Connect extension**. Chrome may require one server-access approval in extension Settings; no password or API key is copied to the extension. Manual code pairing remains available. Each extension token is revocable and expires after 30 days.
+Install the extension, open it, and choose **Connect account**. Chrome may ask permission to contact ContextBridge. The website opens so you can sign in or create and verify an account, then connects the extension automatically. The extension shows your connected account and hides the connect button. Signing out on the website or disconnecting the extension brings it back. No addresses, connection codes, passwords, or API keys need to be copied. Each extension token is revocable and expires after 30 days.
 
 ## ✅ Verified release
 

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Check,
-  Copy,
   Download,
   Globe2,
   Puzzle,
@@ -11,10 +10,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { api, errorMessage, json } from "../api";
-import {
-  connectInstalledExtension,
-  type ExtensionConnection,
-} from "../extension";
+import type { ExtensionState } from "../useExtensionConnection";
 import { ErrorNotice } from "../components/ui";
 import type { Config, Mode, Settings } from "../types";
 
@@ -49,11 +45,13 @@ export default function Preferences({
   config,
   onUpdate,
   onExport,
+  extension,
 }: {
   settings: Settings;
   config: Config;
   onUpdate: () => Promise<void>;
   onExport: () => void;
+  extension: ExtensionState;
 }) {
   const [draft, setDraft] = useState(settings);
   const dirtyFields = useRef(new Set<keyof Settings>());
@@ -62,14 +60,6 @@ export default function Preferences({
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [pair, setPair] = useState<{ code: string; expiresAt: string } | null>(
-    null,
-  );
-  const [copied, setCopied] = useState(false);
-  const [connection, setConnection] = useState<ExtensionConnection | null>(
-    null,
-  );
-  const [now, setNow] = useState(Date.now());
   const [usage, setUsage] = useState<Usage | null>(null);
   const [usageLoading, setUsageLoading] = useState(false);
   const [usageError, setUsageError] = useState("");
@@ -105,10 +95,6 @@ export default function Preferences({
     }));
     previousSettings.current = settings;
   }, [settings]);
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, []);
   function field<K extends keyof Settings>(key: K, value: Settings[K]) {
     dirtyFields.current.add(key);
     setDraft((current) => ({ ...current, [key]: value }));
@@ -135,41 +121,6 @@ export default function Preferences({
       setBusy("");
     }
   }
-  async function connect(manual = false) {
-    setBusy("pair");
-    setError("");
-    setConnection(null);
-    setPair(null);
-    try {
-      const code = await api<{ code: string; expiresAt: string }>(
-        "/extension/pair",
-        json({}),
-      );
-      setCopied(false);
-      if (manual) setPair(code);
-      else {
-        const status = await connectInstalledExtension(code.code);
-        setConnection(status);
-        if (status === "unavailable") setPair(code);
-      }
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setBusy("");
-    }
-  }
-  async function copyCode() {
-    if (!pair) return;
-    try {
-      await navigator.clipboard.writeText(pair.code);
-      setCopied(true);
-    } catch {
-      setError("Please select the connection code and copy it manually.");
-    }
-  }
-  const secondsLeft = pair
-    ? Math.max(0, Math.ceil((new Date(pair.expiresAt).getTime() - now) / 1000))
-    : 0;
   const tokensUsed = usage ? usage.inputTokens + usage.outputTokens : 0;
   return (
     <div className="page-enter">
@@ -393,129 +344,95 @@ export default function Preferences({
               AI call.
             </p>
           </section>
-          <section className="card connect-card">
+          <section className="card connect-card" aria-label="Extension account">
             <span className="settings-icon green">
-              <Puzzle size={25} />
+              {extension.status === "connected" ? (
+                <Check size={25} />
+              ) : (
+                <Puzzle size={25} />
+              )}
             </span>
-            <span className="eyebrow">BRING CONTEXTBRIDGE ALONG</span>
-            <h2>
-              From any page
-              <br />
-              to your word library.
-            </h2>
-            <p>
-              Connect the browser extension to save what you find and continue
-              learning here.
-            </p>
-            <a
-              className="button secondary full-width extension-download"
-              href="/downloads/contextbridge-extension.zip"
-              download
-            >
-              <Download size={16} />
-              Download Chrome extension
-            </a>
-            <ol>
-              <li>Download and unzip the extension above.</li>
-              <li>
-                Open <code>chrome://extensions</code>, turn on Developer mode,
-                then choose <strong>Load unpacked</strong> and select the
-                extracted folder.
-              </li>
-              <li>
-                Choose <strong>Connect installed extension</strong> below. If
-                Chrome asks, approve this website in the extension’s settings.
-              </li>
-              <li>
-                If automatic connection is unavailable, use the connection code
-                and website address below.
-              </li>
-            </ol>
-            <label>
-              Website address
-              <input
-                readOnly
-                value={config.appUrl || window.location.origin}
-                aria-label="Website address for extension"
-              />
-            </label>
-            {connection === "connected" && (
-              <div className="notice success extension-status" role="status">
-                <Check size={17} />
-                <span>
-                  Your extension is connected. Open it to start reading.
+            <span className="eyebrow">YOUR BROWSER COMPANION</span>
+            {extension.status === "connected" ? (
+              <div role="status">
+                <h2>Your extension is connected</h2>
+                <p>
+                  You’re signed in to the same account. Return to the extension
+                  and start reading.
+                </p>
+                <span className="connection-badge">
+                  <span className="status-dot" /> Account connected
                 </span>
               </div>
-            )}
-            {connection === "permission_required" && (
-              <div className="notice extension-status" role="status">
-                <Puzzle size={17} />
-                <span>
-                  Finish in the extension settings that Chrome opened. Approve
-                  this website there to connect automatically.
-                </span>
-              </div>
-            )}
-            {connection === "unavailable" && (
-              <div className="notice extension-status" role="status">
-                <span>
-                  The installed extension could not be reached. Download it
-                  above, or paste this code into its settings to connect.
-                </span>
-              </div>
-            )}
-            {pair && (
-              <div className={`pair-code ${!secondsLeft ? "expired" : ""}`}>
-                <span className="eyebrow">
-                  {secondsLeft ? "ONE-TIME CONNECTION CODE" : "CODE EXPIRED"}
-                </span>
-                <code>{pair.code}</code>
-                <div>
-                  <span>
-                    {secondsLeft
-                      ? `Expires in ${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, "0")}`
-                      : "Generate a new code to connect."}
-                  </span>
+            ) : (
+              <>
+                <h2>
+                  {extension.status === "update_required"
+                    ? "Update your extension"
+                    : "Your words, wherever you read."}
+                </h2>
+                <p>
+                  {extension.status === "update_required"
+                    ? "A simpler connection is ready. Download the latest extension, replace the files in your existing extension folder, then choose Reload on its card at chrome://extensions."
+                    : "Connect the extension to keep your saved words, chats, and preferences together."}
+                </p>
+                {extension.status === "permission_required" && (
+                  <div className="notice extension-status" role="status">
+                    Chrome opened the extension. Choose Connect account there
+                    and allow access to finish.
+                  </div>
+                )}
+                {extension.error && <ErrorNotice message={extension.error} />}
+                {extension.status === "update_required" ? (
+                  <a
+                    className="button primary full-width"
+                    href="/downloads/contextbridge-extension.zip"
+                    download
+                  >
+                    <Download size={17} /> Download updated extension
+                  </a>
+                ) : (
                   <button
                     type="button"
-                    className="icon-button"
-                    disabled={!secondsLeft}
-                    onClick={copyCode}
-                    aria-label="Copy connection code"
+                    className="button primary full-width"
+                    disabled={extension.busy || extension.status === "checking"}
+                    onClick={() => void extension.connect()}
                   >
-                    {copied ? <Check size={17} /> : <Copy size={17} />}
+                    <Puzzle size={17} />
+                    {extension.busy
+                      ? "Connecting your account…"
+                      : extension.status === "checking"
+                        ? "Checking connection…"
+                        : "Connect extension"}
                   </button>
-                </div>
-              </div>
+                )}
+                <details className="extension-install-help">
+                  <summary>Need to install the extension?</summary>
+                  <p>
+                    Install it once in Chrome, then choose Connect account
+                    inside the extension.
+                  </p>
+                  <a
+                    className="button secondary full-width extension-download"
+                    href="/downloads/contextbridge-extension.zip"
+                    download
+                  >
+                    <Download size={16} /> Download Chrome extension
+                  </a>
+                  <ol>
+                    <li>Download and unzip the extension.</li>
+                    <li>
+                      Open <code>chrome://extensions</code> and turn on
+                      Developer mode.
+                    </li>
+                    <li>
+                      Choose <strong>Load unpacked</strong> and select the
+                      extracted folder.
+                    </li>
+                  </ol>
+                </details>
+              </>
             )}
-            <button
-              type="button"
-              className="button primary full-width"
-              disabled={!!busy}
-              onClick={() => connect()}
-            >
-              <Puzzle size={17} />
-              {busy === "pair"
-                ? "Connecting…"
-                : connection === "connected"
-                  ? "Reconnect extension"
-                  : "Connect installed extension"}
-            </button>
-            <button
-              type="button"
-              className="text-link manual-pair-link"
-              disabled={!!busy}
-              onClick={() => connect(true)}
-            >
-              {pair
-                ? "Generate a new connection code"
-                : "Use a connection code instead"}
-            </button>
-            <small className="muted">
-              {pair
-                ? "Treat this code like a sign-in link. It grants access to your library."
-                : "Connect once to bring your saved words and preferences into the extension."}
-            </small>
           </section>
           <section className="card export-card">
             <Download size={22} />

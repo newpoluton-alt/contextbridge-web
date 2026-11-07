@@ -3,6 +3,7 @@ import { ArrowRight, BookOpen, LoaderCircle } from "lucide-react";
 import type { AuthClient } from "../auth";
 import { Brand, ErrorNotice } from "../components/ui";
 import { errorMessage } from "../api";
+import { hasExtensionConnectIntent } from "../extension";
 
 export default function AuthScreen({
   client,
@@ -177,6 +178,12 @@ export default function AuthScreen({
                   ? "Enter the code sent to your email address."
                   : "We’ll help you return to your learning space."}
           </p>
+          {hasExtensionConnectIntent() && (
+            <div className="notice" role="status">
+              Sign in or create an account here. Your extension will connect
+              automatically when you’re signed in.
+            </div>
+          )}
           {!client && (
             <ErrorNotice message="Sign-in is not configured yet. Add the Neon Auth URL to the web server’s environment to enable accounts." />
           )}
